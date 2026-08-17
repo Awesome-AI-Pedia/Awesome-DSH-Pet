@@ -1,0 +1,67 @@
+{
+  "characters": {
+    "jingyu-zongcai": {
+      "name": "鲸鱼总裁",
+      "credit": "Codex pet",
+      "description": "一位西装革履、毒舌但可靠的 Q 版霸总编程伴侣。",
+      "meta": {
+        "stageSize": 110,
+        "atlas": {
+          "columns": 8,
+          "rows": 9,
+          "cellWidth": 192,
+          "cellHeight": 208
+        }
+      },
+      "states": {
+        "idle": { "sheet": "spritesheet.webp", "row": 0, "rows": 9, "frames": 8, "fps": 4, "playback": "blink" },
+        "working": { "sheet": "spritesheet.webp", "row": 7, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "celebrate": { "sheet": "spritesheet.webp", "row": 3, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "error": { "sheet": "spritesheet.webp", "row": 5, "rows": 9, "frames": 8, "fps": 8, "motion": "shake", "playback": "once" },
+        "disappointed": { "sheet": "spritesheet.webp", "row": 5, "rows": 9, "frames": 8, "fps": 4, "playback": "loop" },
+        "joy": { "sheet": "spritesheet.webp", "row": 3, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "eat": { "sheet": "spritesheet.webp", "row": 3, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "play": { "sheet": "spritesheet.webp", "row": 4, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "drag": { "sheet": "spritesheet.webp", "row": 1, "rows": 9, "frames": 8, "fps": 8, "playback": "loop" },
+        "walk": { "sheet": "spritesheet.webp", "row": 1, "rows": 9, "frames": 8, "fps": 8, "playback": "pingpong" },
+        "sleep": { "sheet": "spritesheet.webp", "row": 0, "rows": 9, "frames": 8, "fps": 2, "playback": "loop" },
+        "wake": { "sheet": "spritesheet.webp", "row": 3, "rows": 9, "frames": 8, "fps": 6, "playback": "once" },
+        "welcome": { "sheet": "spritesheet.webp", "row": 3, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "think": { "sheet": "spritesheet.webp", "row": 8, "rows": 9, "frames": 8, "fps": 4, "playback": "loop" },
+        "wait": { "sheet": "spritesheet.webp", "row": 6, "rows": 9, "frames": 8, "fps": 4, "playback": "loop" }
+      }
+    },
+    "lulu-capybara": {
+      "name": "噜噜",
+      "credit": "Codex pet",
+      "description": "一只软萌、圆滚滚、安静治愈的水豚宠物。",
+      "meta": {
+        "stageSize": 110,
+        "atlas": {
+          "columns": 8,
+          "rows": 9,
+          "cellWidth": 192,
+          "cellHeight": 208
+        }
+      },
+      "states": {
+        "idle": { "sheet": "spritesheet.webp", "row": 0, "rows": 9, "frames": 8, "fps": 4, "playback": "blink" },
+        "working": { "sheet": "spritesheet.webp", "row": 7, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "celebrate": { "sheet": "spritesheet.webp", "row": 3, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "error": { "sheet": "spritesheet.webp", "row": 5, "rows": 9, "frames": 8, "fps": 8, "motion": "shake", "playback": "once" },
+        "disappointed": { "sheet": "spritesheet.webp", "row": 5, "rows": 9, "frames": 8, "fps": 4, "playback": "loop" },
+        "joy": { "sheet": "spritesheet.webp", "row": 3, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "eat": { "sheet": "spritesheet.webp", "row": 3, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "play": { "sheet": "spritesheet.webp", "row": 4, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "drag": { "sheet": "spritesheet.webp", "row": 1, "rows": 9, "frames": 8, "fps": 8, "playback": "loop" },
+        "walk": { "sheet": "spritesheet.webp", "row": 1, "rows": 9, "frames": 8, "fps": 8, "playback": "pingpong" },
+        "sleep": { "sheet": "spritesheet.webp", "row": 0, "rows": 9, "frames": 8, "fps": 2, "playback": "loop" },
+        "wake": { "sheet": "spritesheet.webp", "row": 3, "rows": 9, "frames": 8, "fps": 6, "playback": "once" },
+        "welcome": { "sheet": "spritesheet.webp", "row": 3, "rows": 9, "frames": 8, "fps": 6, "playback": "loop" },
+        "think": { "sheet": "spritesheet.webp", "row": 8, "rows": 9, "frames": 8, "fps": 4, "playback": "loop" },
+        "wait": { "sheet": "spritesheet.webp", "row": 6, "rows": 9, "frames": 8, "fps": 4, "playback": "loop" }
+      }
+    }
+  },
+  "default": "jingyu-zongcai"
+}

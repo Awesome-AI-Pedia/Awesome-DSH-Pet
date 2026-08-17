@@ -1,0 +1,44 @@
+{
+  "name": "awesome-dsh-pet",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "DSH Web GUI 内可扩展多角色桌面宠物",
+  "main": "lib/index.mjs",
+  "files": [
+    "lib/index.mjs",
+    "lib/client.js",
+    "lib/client",
+    "lib/src",
+    "lib/assets/characters",
+    "lib/assets/manifest.json",
+    "cordis.patch.yml"
+  ],
+  "exports": {
+    ".": "./lib/index.mjs",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "schemastery": "^3.18.0"
+  },
+  "scripts": {
+    "gates": "node scripts/gates/run.mjs",
+    "gates:ci": "node scripts/gates/run.mjs --group ci",
+    "test": "node --test 'tests/*.test.mjs'",
+    "build:client": "node scripts/build-client.mjs",
+    "check:client": "node scripts/build-client.mjs --check"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  },
+  "license": "MIT"
+}
