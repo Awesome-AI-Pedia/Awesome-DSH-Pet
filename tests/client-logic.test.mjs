@@ -277,9 +277,9 @@ test('shouldWake：sleep→非 sleep 且非拖拽/无瞬发 → 播 wake', () =>
 test('nextBlinkAt：随机间隔内返回下次眨眼时刻（区间边界用注入随机源）', () => {
   // r=0 → 最短间隔；r→1⁻ → 接近最长间隔
   const min = nextBlinkAt({ now: 1000, random: () => 0 })
-  assert.equal(min, 1000 + 3000) // BLINK_MIN_INTERVAL_MS
+  assert.equal(min, 1000 + 8000) // BLINK_MIN_INTERVAL_MS
   const max = nextBlinkAt({ now: 1000, random: () => 0.999 })
-  assert.ok(max >= 1000 + 3000 && max <= 1000 + 9000) // BLINK_MAX_INTERVAL_MS 区间
+  assert.ok(max >= 1000 + 8000 && max <= 1000 + 18000) // BLINK_MAX_INTERVAL_MS 区间
   // 每次调用随机独立（不同随机源值 → 不同结果）
   const a = nextBlinkAt({ now: 0, random: () => 0.2 })
   const b = nextBlinkAt({ now: 0, random: () => 0.8 })
