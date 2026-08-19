@@ -222,51 +222,54 @@ if (imgDesc?.get && imgDesc?.set) {
 // 用静态 import（构造时被 Vite 解析），比 dynamic import('...') 更靠谱：
 // dynamic 的字符串在 Vite 里可能被当成 URL 请求，走到 SPA fallback。
 import * as clientMod from '../../lib/client/index.mjs'
+const win = getCurrentWindow()
+const startWindowDrag = () => win.startDragging()
 // lib/client/index.mjs 的 apply(ctx) 返回一个 dispose 函数
-const dispose = clientMod.apply({ resolveAssetUrl })
+const dispose = clientMod.apply({ resolveAssetUrl, startWindowDrag })
 
 // ---- 4. 桌面专属交互 ----
-const win = getCurrentWindow()
-
-// 4a. 拖拽：按住宠物本体拖动窗口
-// lib/client 挂的 host 是 [data-awesome-dsh-pet]；里面 .pet-stage 是可交互区域
-// 拖拽阈值：mousedown 后移动超过 3px 才切进 startDragging（避免影响 click/menu）
 const host = () => document.querySelector('[data-awesome-dsh-pet]')
-document.addEventListener('mousedown', async (e) => {
-  if (e.button !== 0) return
-  const petHost = host()
-  if (!petHost || !petHost.contains(e.target)) return
-  // lib/client 的 stage 自己会处理点击/拖拽宠物（drag 状态），不能全权抢走；
-  // 只在鼠标按下持续超过 250ms 且未产生 click 时才启动窗口拖拽。
-  // 简化做法：让 lib/client 处理，这里不抢——窗口拖拽改用 Alt+拖拽（macOS 惯例）。
-  if (!e.altKey) return
-  e.preventDefault()
-  await win.startDragging()
-}, true)
 
-// 4b. hover 穿透：鼠标不在宠物本体上时穿透，让下层窗口能点
-// 由 Rust 侧命令 set_ignore_cursor_events 控制
-// 【调试期临时关闭】：宠物 host 未挂载时会把整个窗口设穿透，导致 devtools 也点不中。
-const HOVER_PASSTHROUGH_ENABLED = false
-let currentlyIgnoring = false
-const setIgnore = async (ignore) => {
-  if (!HOVER_PASSTHROUGH_ENABLED) return
-  if (ignore === currentlyIgnoring) return
-  currentlyIgnoring = ignore
-  try { await invoke('set_ignore_cursor_events', { ignore }) } catch (err) { console.warn(err) }
+// 4a. 精确穿透：把人物热区及打开后的菜单热区同步给 Rust。原生层使用全局鼠标
+// 坐标切换 ignoresMouseEvents，因此透明区穿透后，鼠标回到人物仍能自动恢复交互。
+let lastHitRegions = ''
+let hitRegionFrame = 0
+const syncHitRegions = async () => {
+  hitRegionFrame = 0
+  const petHost = host()
+  const regions = []
+  const addRegion = (element) => {
+    if (!element) return
+    const style = getComputedStyle(element)
+    const rect = element.getBoundingClientRect()
+    if (style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) return
+    regions.push({ x: rect.left, y: rect.top, width: rect.width, height: rect.height })
+  }
+  addRegion(petHost?.querySelector('.pet-hitarea'))
+  if (petHost?.getAttribute('aria-expanded') === 'true') addRegion(petHost.querySelector('.pet-menu'))
+
+  const signature = JSON.stringify(regions.map((region) => Object.fromEntries(
+    Object.entries(region).map(([key, value]) => [key, Math.round(value * 10) / 10]),
+  )))
+  if (signature === lastHitRegions) return
+  lastHitRegions = signature
+  try { await invoke('set_pet_hit_regions', { regions }) } catch (err) { console.warn(err) }
 }
-// 用 mousemove 采样：命中 host 就吸事件，未命中就放走
-document.addEventListener('mousemove', (e) => {
-  const petHost = host()
-  if (!petHost) { setIgnore(true); return }
-  const r = petHost.getBoundingClientRect()
-  const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom
-  setIgnore(!inside)
-}, true)
-// 初始进入窗口先不穿透（否则右键菜单打不开），首次 mousemove 后按位置决定
-setIgnore(false)
+const queueHitRegionSync = () => {
+  if (hitRegionFrame !== 0) return
+  hitRegionFrame = requestAnimationFrame(syncHitRegions)
+}
+const hitRegionObserver = new MutationObserver(queueHitRegionSync)
+hitRegionObserver.observe(document.body, {
+  childList: true,
+  subtree: true,
+  attributes: true,
+  attributeFilter: ['aria-expanded', 'class', 'style'],
+})
+window.addEventListener('resize', queueHitRegionSync)
+queueHitRegionSync()
 
-// 4c. 右键菜单
+// 4b. 右键菜单
 document.addEventListener('contextmenu', async (e) => {
   e.preventDefault()
   const autostart = await isAutostartEnabled().catch(() => false)
@@ -303,5 +306,10 @@ document.addEventListener('contextmenu', async (e) => {
   await menu.popup()
 })
 
-// 4d. 页面关闭清理
-window.addEventListener('beforeunload', () => { try { dispose?.() } catch {} })
+// 4c. 页面关闭清理
+window.addEventListener('beforeunload', () => {
+  hitRegionObserver.disconnect()
+  window.removeEventListener('resize', queueHitRegionSync)
+  if (hitRegionFrame !== 0) cancelAnimationFrame(hitRegionFrame)
+  try { dispose?.() } catch {}
+})

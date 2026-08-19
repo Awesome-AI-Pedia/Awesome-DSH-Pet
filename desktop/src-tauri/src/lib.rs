@@ -8,7 +8,13 @@
 // 3. 暴露自定义命令：set_ignore_cursor_events / quit_app。
 
 use serde::{Deserialize, Serialize};
-use std::{env, fs, path::PathBuf, time::Duration};
+use std::{
+    env, fs,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
+};
 use tauri::{Emitter, Manager, PhysicalPosition, State, WebviewWindow};
 
 const DSH_URL_ENV: &str = "DSH_BASE_URL";
@@ -33,6 +39,63 @@ struct DshResponse {
     body: Vec<u8>,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HitRect {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+}
+
+#[derive(Clone, Default)]
+struct PointerPassthrough {
+    regions: Arc<Mutex<Vec<HitRect>>>,
+}
+
+fn cursor_hits_regions(
+    cursor: PhysicalPosition<f64>,
+    window_origin: PhysicalPosition<i32>,
+    scale: f64,
+    regions: &[HitRect],
+) -> bool {
+    regions.iter().any(|region| {
+        let left = window_origin.x as f64 + region.x * scale;
+        let top = window_origin.y as f64 + region.y * scale;
+        let right = left + region.width * scale;
+        let bottom = top + region.height * scale;
+        cursor.x >= left && cursor.x <= right && cursor.y >= top && cursor.y <= bottom
+    })
+}
+
+fn start_pointer_passthrough(window: WebviewWindow, state: PointerPassthrough) {
+    thread::spawn(move || {
+        let mut last_ignore = None;
+        loop {
+            let regions = state
+                .regions
+                .lock()
+                .map(|value| value.clone())
+                .unwrap_or_default();
+            let inside = match (
+                window.cursor_position(),
+                window.outer_position(),
+                window.scale_factor(),
+            ) {
+                (Ok(cursor), Ok(origin), Ok(scale)) => {
+                    cursor_hits_regions(cursor, origin, scale, &regions)
+                }
+                _ => false,
+            };
+            let ignore = !inside;
+            if last_ignore != Some(ignore) && window.set_ignore_cursor_events(!inside).is_ok() {
+                last_ignore = Some(ignore);
+            }
+            thread::sleep(Duration::from_millis(30));
+        }
+    });
+}
+
 fn config_path() -> Option<PathBuf> {
     // macOS: ~/Library/Application Support/com.yuki22.awesome-dsh-pet/config.json
     // Linux/Windows: dirs::config_dir() 类似位置
@@ -48,8 +111,12 @@ fn config_path() -> Option<PathBuf> {
 }
 
 fn load_config() -> DesktopConfig {
-    let Some(path) = config_path() else { return DesktopConfig::default() };
-    let Ok(bytes) = fs::read(&path) else { return DesktopConfig::default() };
+    let Some(path) = config_path() else {
+        return DesktopConfig::default();
+    };
+    let Ok(bytes) = fs::read(&path) else {
+        return DesktopConfig::default();
+    };
     serde_json::from_slice(&bytes).unwrap_or_default()
 }
 
@@ -75,7 +142,29 @@ fn resolve_dsh_url(cli_args: &[String]) -> String {
 
 #[tauri::command]
 fn set_ignore_cursor_events(window: WebviewWindow, ignore: bool) -> Result<(), String> {
-    window.set_ignore_cursor_events(ignore).map_err(|e| e.to_string())
+    window
+        .set_ignore_cursor_events(ignore)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_pet_hit_regions(
+    state: State<'_, PointerPassthrough>,
+    regions: Vec<HitRect>,
+) -> Result<(), String> {
+    let regions = regions
+        .into_iter()
+        .filter(|region| {
+            region.x.is_finite()
+                && region.y.is_finite()
+                && region.width.is_finite()
+                && region.height.is_finite()
+                && region.width > 0.0
+                && region.height > 0.0
+        })
+        .collect();
+    *state.regions.lock().map_err(|error| error.to_string())? = regions;
+    Ok(())
 }
 
 #[tauri::command]
@@ -92,8 +181,7 @@ async fn dsh_request(
     content_type: Option<String>,
 ) -> Result<DshResponse, String> {
     let route = path.split('?').next().unwrap_or_default();
-    let allowed = route == "/awesome-dsh-pet"
-        || route.starts_with("/awesome-dsh-pet/");
+    let allowed = route == "/awesome-dsh-pet" || route.starts_with("/awesome-dsh-pet/");
     if !allowed || route.split('/').any(|part| part == "..") {
         return Err("invalid awesome-dsh-pet route".to_string());
     }
@@ -120,11 +208,17 @@ async fn dsh_request(
         .and_then(|value| value.to_str().ok())
         .map(str::to_owned);
     let body = response.bytes().await.map_err(|e| e.to_string())?.to_vec();
-    Ok(DshResponse { status, content_type, body })
+    Ok(DshResponse {
+        status,
+        content_type,
+        body,
+    })
 }
 
 fn place_bottom_right(window: &WebviewWindow) -> tauri::Result<()> {
-    let Some(monitor) = window.current_monitor()? else { return Ok(()); };
+    let Some(monitor) = window.current_monitor()? else {
+        return Ok(());
+    };
     let scale = monitor.scale_factor();
     let size = window.outer_size()?;
     let m = monitor.size();
@@ -145,9 +239,12 @@ pub fn run() {
         .timeout(Duration::from_secs(4))
         .build()
         .expect("failed to build DSH HTTP client");
+    let pointer_passthrough = PointerPassthrough::default();
+    let pointer_passthrough_for_setup = pointer_passthrough.clone();
 
     tauri::Builder::default()
         .manage(DshHttp { base_url: dsh_url.clone(), client })
+        .manage(pointer_passthrough)
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec![]),
@@ -165,6 +262,7 @@ pub fn run() {
 
             // 首次放到屏幕右下角（用户可以随后拖动）
             let _ = place_bottom_right(&window);
+            start_pointer_passthrough(window.clone(), pointer_passthrough_for_setup.clone());
 
             // macOS：窗口浮在所有 spaces（切工作区不消失）
             #[cfg(target_os = "macos")]
@@ -185,6 +283,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             set_ignore_cursor_events,
+            set_pet_hit_regions,
             quit_app,
             dsh_request
         ])

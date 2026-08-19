@@ -50,7 +50,51 @@ test('desktop passes bundled asset URLs through to the sprite renderer', async (
     read('lib/client/index.mjs'),
   ])
 
-  assert.match(main, /clientMod\.apply\(\{\s*resolveAssetUrl\s*\}\)/)
+  assert.match(main, /clientMod\.apply\(\{\s*resolveAssetUrl,\s*startWindowDrag\s*\}\)/)
   assert.match(client, /ctx\.resolveAssetUrl/)
   assert.match(client, /resolveAssetUrl\(`\$\{ASSETS_URL\}\/characters\/\$\{id\}\/\$\{sheet\}/)
+})
+
+test('desktop starts native window dragging after an ordinary pet drag', async () => {
+  const [main, client] = await Promise.all([
+    read('desktop/src/main.mjs'),
+    read('lib/client/index.mjs'),
+  ])
+
+  assert.doesNotMatch(main, /e\.altKey/)
+  assert.match(main, /const startWindowDrag = \(\) => win\.startDragging\(\)/)
+  assert.match(main, /clientMod\.apply\(\{ resolveAssetUrl, startWindowDrag \}\)/)
+  assert.match(client, /ctx\.startWindowDrag/)
+})
+
+test('desktop window drag release is not treated as a pet click', async () => {
+  const client = await read('lib/client/index.mjs')
+
+  assert.match(client, /let nativeWindowDragActive = false/)
+  assert.match(client, /nativeWindowDragActive = true[\s\S]{0,500}startWindowDrag\(\)/)
+  assert.match(client, /dragClickSuppressUntil = Date\.now\(\) \+ 1000/)
+  assert.match(client, /const wasMoved = moved \|\| nativeWindowDragActive \|\| Date\.now\(\) < dragClickSuppressUntil/)
+})
+
+test('pet drag facing follows stable screen coordinates', async () => {
+  const client = await read('lib/client/index.mjs')
+
+  assert.match(client, /let lastPointerScreenX = 0/)
+  assert.match(client, /e\.screenX < lastPointerScreenX/)
+  assert.match(client, /lastPointerScreenX = e\.screenX/)
+})
+
+test('transparent pixels pass pointer events through while pet controls stay interactive', async () => {
+  const [main, rust] = await Promise.all([
+    read('desktop/src/main.mjs'),
+    read('desktop/src-tauri/src/lib.rs'),
+  ])
+
+  assert.match(main, /invoke\(['"]set_pet_hit_regions['"]/)
+  assert.match(main, /\.pet-hitarea/)
+  assert.match(main, /aria-expanded/)
+  assert.doesNotMatch(main, /HOVER_PASSTHROUGH_ENABLED\s*=\s*false/)
+  assert.match(rust, /fn start_pointer_passthrough/)
+  assert.match(rust, /window\.cursor_position\(\)/)
+  assert.match(rust, /window\.set_ignore_cursor_events\(!inside\)/)
 })
