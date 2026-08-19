@@ -1,0 +1,39 @@
+[package]
+name = "awesome-dsh-pet-desktop"
+version = "0.1.0"
+description = "桌面版 awesome-dsh-pet：Tauri v2 透明穿透窗口宿主"
+authors = ["yuki22"]
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "awesome_dsh_pet_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# devtools feature 常开：能力包含在 binary 里但只在 debug 构建通过 open_devtools() 触发。
+# release 体积代价约 +3MB，换来 dev 时可调试，值得。
+tauri = { version = "2", features = ["macos-private-api", "tray-icon", "devtools"] }
+tauri-plugin-autostart = "2"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# ---- 体积优化：release 打包用 ----
+# 之前无 [profile.release] 配置，默认打出来 40MB+；开启后预计降到 8~15MB。
+[profile.release]
+opt-level = "z"      # 体积优先（比 "s" 更狠）
+lto = true           # 链接时优化，消除跨 crate 冗余
+codegen-units = 1    # 换更小的产物（编译更慢）
+panic = "abort"      # 去掉 unwind 表
+strip = true         # 去符号表
+incremental = false
+
+# dev 用增量+尽量少的调试信息，压缩 target/ 里 incremental 与 deps 的膨胀
+[profile.dev]
+incremental = true
+debug = "line-tables-only"  # 保留 backtrace 行号，去掉大部分 DWARF，能砍 30-50% target 体积
+split-debuginfo = "unpacked"

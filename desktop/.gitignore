@@ -1,0 +1,12 @@
+# Node / Vite
+node_modules
+dist
+.vite
+
+# Tauri / Rust
+src-tauri/target
+src-tauri/Cargo.lock
+src-tauri/gen
+
+# 系统
+.DS_Store

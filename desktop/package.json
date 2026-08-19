@@ -1,0 +1,20 @@
+{
+  "name": "awesome-dsh-pet-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "桌面版鲸鱼总裁 —— 复用 awesome-dsh-pet 插件的动画/状态机，通过 Tauri v2 落到桌面。",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "vite": "^5.4.10"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-autostart": "^2.0.0"
+  }
+}

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>桌面宠物</title>
+    <style>
+      /* 整个 body 就是 Tauri 窗口内容——透明背景交给 Tauri 窗口本身 */
+      html, body {
+        margin: 0; padding: 0;
+        width: 100%; height: 100%;
+        background: transparent;
+        overflow: hidden;
+        user-select: none; -webkit-user-select: none;
+        cursor: default;
+      }
+      /* lib/client 会往 body 追加一个 [data-awesome-dsh-pet] 的 div；
+         它自己是 position:fixed，我们把它固定成占满窗口即可（宠物在窗口中心）*/
+      [data-awesome-dsh-pet] {
+        right: auto !important; bottom: auto !important;
+        left: 50% !important; top: 50% !important;
+        transform: translate(-50%, -50%);
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module" src="./main.mjs"></script>
+  </body>
+</html>
