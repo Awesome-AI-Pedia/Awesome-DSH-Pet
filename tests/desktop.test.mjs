@@ -51,7 +51,9 @@ test('desktop passes bundled asset URLs through to the sprite renderer', async (
   ])
 
   assert.match(main, /clientMod\.apply\(\{\s*resolveAssetUrl,\s*startWindowDrag\s*\}\)/)
-  assert.match(client, /ctx\.resolveAssetUrl/)
+  // client 通过 readCtx('resolveAssetUrl') 消费（cordis Context 走 ctx.get，
+  // 桌面裸对象走 ctx[name]）——两种形态由 readCtx 统一。
+  assert.match(client, /readCtx\(['"]resolveAssetUrl['"]\)/)
   assert.match(client, /resolveAssetUrl\(`\$\{ASSETS_URL\}\/characters\/\$\{id\}\/\$\{sheet\}/)
 })
 
@@ -64,7 +66,7 @@ test('desktop starts native window dragging after an ordinary pet drag', async (
   assert.doesNotMatch(main, /e\.altKey/)
   assert.match(main, /const startWindowDrag = \(\) => win\.startDragging\(\)/)
   assert.match(main, /clientMod\.apply\(\{ resolveAssetUrl, startWindowDrag \}\)/)
-  assert.match(client, /ctx\.startWindowDrag/)
+  assert.match(client, /readCtx\(['"]startWindowDrag['"]\)/)
 })
 
 test('desktop window drag release is not treated as a pet click', async () => {
